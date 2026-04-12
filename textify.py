@@ -14,6 +14,7 @@ import urllib.request
 from pathlib import Path
 
 GEMINI_MODEL = "gemini-3.1-pro-preview"
+REQUEST_STAGGER_SECONDS = 1.0
 PROMPT = (
     "Transcribe all handwritten Russian text from this document. "
     "Format the text into proper paragraphs and add correct punctuation. "
@@ -54,12 +55,6 @@ def transcribe(pdf_path: Path, api_key: str) -> str:
     return result["candidates"][0]["content"]["parts"][0]["text"]
 
 
-def process_file(pdf_path: Path, out_path: Path, api_key: str) -> None:
-    text = transcribe(pdf_path, api_key)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(text, encoding="utf-8")
-
-
 class Spinner:
     _frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
@@ -67,9 +62,14 @@ class Spinner:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._label = ""
+        self._lock = threading.Lock()
+
+    def set_label(self, label: str) -> None:
+        with self._lock:
+            self._label = label
 
     def start(self, label: str) -> None:
-        self._label = label
+        self.set_label(label)
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._spin, daemon=True)
         self._thread.start()
@@ -78,14 +78,16 @@ class Spinner:
         for frame in itertools.cycle(self._frames):
             if self._stop_event.is_set():
                 break
-            print(f"\r{frame} {self._label}", end="", flush=True)
+            with self._lock:
+                label = self._label
+            print(f"\r{frame} {label}", end="", flush=True)
             time.sleep(0.08)
 
     def stop(self, result_line: str) -> None:
         self._stop_event.set()
         if self._thread:
             self._thread.join()
-        print(f"\r{result_line}")  # overwrite spinner line
+        print(f"\r{result_line}")
 
 
 def main() -> None:
@@ -110,7 +112,6 @@ def main() -> None:
     if input_path.is_file():
         if args.dest:
             dest = Path(args.dest)
-            # Treat as file if it has a suffix, otherwise as directory
             out_path = dest if dest.suffix else dest / (input_path.stem + ".txt")
         else:
             out_path = None  # print to stdout
@@ -139,22 +140,42 @@ def main() -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
 
         total = len(pdfs)
-        errors = []
+        done_count = 0
+        results: dict[Path, Exception | None] = {}
+        lock = threading.Lock()
         spinner = Spinner()
+        spinner.start(f"0/{total} done")
 
-        for i, pdf in enumerate(pdfs):
-            spinner.start(f"{pdf.name}  ({i + 1}/{total})")
+        def worker(i: int, pdf: Path) -> None:
+            nonlocal done_count
+            time.sleep(i * REQUEST_STAGGER_SECONDS)
+            error = None
             try:
-                process_file(pdf, out_dir / (pdf.stem + ".txt"), api_key)
-                spinner.stop(f"✓ {pdf.name}  ({i + 1}/{total})")
+                text = transcribe(pdf, api_key)
+                out_path = out_dir / (pdf.stem + ".txt")
+                out_path.write_text(text, encoding="utf-8")
             except Exception as e:
-                spinner.stop(f"✗ {pdf.name}: {e}")
-                errors.append((pdf.name, e))
+                error = e
+            with lock:
+                done_count += 1
+                results[pdf] = error
+                spinner.set_label(f"{done_count}/{total} done")
 
-        if errors:
-            print("\nErrors:", file=sys.stderr)
-            for name, err in errors:
-                print(f"  {name}: {err}", file=sys.stderr)
+        threads = [
+            threading.Thread(target=worker, args=(i, pdf), daemon=True)
+            for i, pdf in enumerate(pdfs)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        spinner.stop(f"✓ {total}/{total} done")
+
+        for pdf in pdfs:
+            err = results.get(pdf)
+            if err:
+                print(f"  ✗ {pdf.name}: {err}", file=sys.stderr)
 
     else:
         print(f"Error: {input_path} is not a valid file or directory", file=sys.stderr)

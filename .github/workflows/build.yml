@@ -1,0 +1,26 @@
+name: Build site
+
+on:
+  push:
+    paths:
+      - "Текст/все.txt"
+      - "templates/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: python3 build.py
+
+      - name: Commit docs/
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/
+          git diff --cached --quiet || git commit -m "rebuild site"
+          git push

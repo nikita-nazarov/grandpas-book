@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} — Воспоминания</title>
+  <link rel="stylesheet" href="tufte.css">
+  <style>
+    .chapnav {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.4rem;
+      margin-bottom: 3rem;
+      font-size: 0.85rem;
+    }
+    .chapnav a { color: #555; text-decoration: none; }
+    .chapnav a:hover { color: #111; }
+    .page-turn {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ddd;
+      font-size: 0.9rem;
+    }
+    .page-turn a { color: #555; text-decoration: none; }
+    .page-turn a:hover { color: #111; }
+    .page-turn .disabled { color: #ccc; }
+  </style>
+</head>
+<body>
+<article>
+  <div class="chapnav">
+    <a href="contents.html">Содержание</a>
+    <span></span>
+  </div>
+  <h1>${heading}</h1>
+  <section>
+    ${body}
+  </section>
+  <div class="page-turn">
+    ${nav_prev}
+    ${nav_next}
+  </div>
+</article>
+</body>
+</html>

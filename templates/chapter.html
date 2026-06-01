@@ -8,8 +8,8 @@
   <style>
     .chapnav {
       display: flex;
-      justify-content: space-between;
       align-items: baseline;
+      gap: 1.5rem;
       border-bottom: 1px solid #ddd;
       padding-bottom: 0.4rem;
       margin-bottom: 3rem;
@@ -17,8 +17,10 @@
     }
     .chapnav a { color: #555; text-decoration: none; }
     .chapnav a:hover { color: #111; }
-    .page-turn-inline { display: flex; gap: 1.2rem; font-size: 0.85rem; }
-    .page-turn-inline .disabled { display: none; }
+    .chapnav-buttons { display: flex; gap: 1.2rem; align-items: baseline; }
+    .chapnav-buttons a { color: #555; text-decoration: none; }
+    .chapnav-buttons a:hover { color: #111; }
+    .chapnav-buttons .chapnav-active { color: #111; font-weight: bold; }
     .page-turn {
       display: flex;
       justify-content: space-between;
@@ -36,9 +38,8 @@
 <article>
   <div class="chapnav">
     <a href="contents.html">Содержание</a>
-    <div class="page-turn-inline">
-      ${nav_prev}
-      ${nav_next}
+    <div class="chapnav-buttons">
+      ${chapter_nav}
     </div>
   </div>
   <h1>${heading}</h1>

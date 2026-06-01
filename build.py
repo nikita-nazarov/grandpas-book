@@ -91,12 +91,21 @@ def main() -> None:
             f'<a href="chapter-{n+1}.html">Древо {escape(chapters[n][0])} →</a>'
             if n < total else '<span class="disabled">→</span>'
         )
+        chapter_nav_parts = []
+        for i, (t, _) in enumerate(chapters, 1):
+            href = "index.html" if i == 1 else f"chapter-{i}.html"
+            if i == n:
+                chapter_nav_parts.append(f'<span class="chapnav-active">Древо {escape(t)}</span>')
+            else:
+                chapter_nav_parts.append(f'<a href="{href}">Древо {escape(t)}</a>')
+        chapter_nav = "\n      ".join(chapter_nav_parts)
         html = chapter_tmpl.substitute(
             title=escape(f"Древо {title}"),
             heading=f"Древо {escape(title)}",
             body=paragraphs_to_html(body),
             nav_prev=prev,
             nav_next=nxt,
+            chapter_nav=chapter_nav,
         )
         filename = "index.html" if n == 1 else f"chapter-{n}.html"
         (OUT / filename).write_text(html, encoding="utf-8")
